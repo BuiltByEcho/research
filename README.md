@@ -84,6 +84,13 @@ npm install -g @builtbyecho/research
 builtbyecho-research --help
 ```
 
+
+### OpenClaw / Agent skill
+
+This repo includes an OpenClaw-compatible skill at [`skills/builtbyecho-research/SKILL.md`](skills/builtbyecho-research/SKILL.md).
+
+Agents can use that file as their install/use guide for `@builtbyecho/research`, including `npx`, global npm install, browser setup, and common research commands.
+
 ## Optional setup
 
 No API key is required.
