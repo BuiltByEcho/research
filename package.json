@@ -1,6 +1,6 @@
 {
   "name": "web-research-harness",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Local web research harness: cheap fetch, search discovery, rendered extraction, structured outputs.",
