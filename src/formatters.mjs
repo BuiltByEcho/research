@@ -10,6 +10,25 @@ export function toMarkdown(result, opts = {}) {
   const lines = [];
   lines.push(`# Research: ${result.query}`);
   lines.push(`Results: ${result.count}`);
+  if (result.plan?.queries?.length) {
+    lines.push('');
+    lines.push('## Research plan');
+    for (const q of result.plan.queries) lines.push(`- **${q.label}:** ${q.query}`);
+  }
+  if (result.audit) {
+    lines.push('');
+    lines.push('## Research audit');
+    lines.push(`- **Grade:** ${result.audit.grade}`);
+    lines.push(`- **Hosts:** ${result.audit.uniqueHosts} | **High-quality sources:** ${result.audit.highQualitySources}`);
+    if (result.audit.warnings?.length) {
+      lines.push('- **Warnings:**');
+      for (const warning of result.audit.warnings) lines.push(`  - ${warning}`);
+    }
+    if (result.audit.followUpQueries?.length) {
+      lines.push('- **Suggested follow-up queries:**');
+      for (const q of result.audit.followUpQueries) lines.push(`  - ${q}`);
+    }
+  }
   lines.push('');
 
   for (const r of result.results) {
@@ -17,8 +36,11 @@ export function toMarkdown(result, opts = {}) {
     lines.push(`- **URL:** ${r.url}`);
     lines.push(`- **Source:** ${r.source || 'unknown'}`);
     if (r.score != null) lines.push(`- **Score:** ${r.score}/100`);
+    if (r.sourceQuality) lines.push(`- **Source quality:** ${r.sourceQuality.score}/100 (${r.sourceQuality.signals.join(', ') || 'no signals'})`);
+    if (r.searchQuery) lines.push(`- **Search angle:** ${r.angle || 'direct'} — ${r.searchQuery}`);
     if (r.fetch) {
       lines.push(`- **Status:** ${r.fetch.status} | **Type:** ${r.fetch.contentType} | **Bytes:** ${r.fetch.bytes}`);
+      if (r.fetch.publishedAt || r.fetch.modifiedAt) lines.push(`- **Date signal:** ${r.fetch.publishedAt || r.fetch.modifiedAt}`);
       if (r.fetch.jsGated) lines.push(`- ⚠️ **JS-gated** (${r.fetch.jsGatedSignals?.join(', ')})`);
     }
     if (r.snippet) lines.push(`- **Snippet:** ${r.snippet}`);

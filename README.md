@@ -1,151 +1,346 @@
-# Web Research Harness
+# BuiltByEcho Research
 
-Local-first research harness for Echo. The goal is a disciplined web research pipeline that's cheap to run and produces structured, citation-friendly, agent-consumable output.
+> Local-first web research for agents: plan, search, fetch, render, rank, audit, trace, and report.
+
+[![CI](https://github.com/BuiltByEcho/research/actions/workflows/ci.yml/badge.svg)](https://github.com/BuiltByEcho/research/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-cyan.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D20-0ea5e9.svg)](package.json)
+
+**BuiltByEcho Research** is a practical research harness for agents and developers who need reliable source discovery, citation-backed reports, and browser-aware extraction without depending on paid scraping APIs.
+
+It starts cheap with normal HTTP fetches, escalates to Playwright only when a page needs rendering, scores source quality, audits evidence coverage, and saves traceable JSON artifacts so every research run can be inspected later.
+
+```text
+plan → search → fetch → maybe render → extract → score → diversify → audit → follow up → report/trace
+```
+
+## Why this exists
+
+Most “research agents” fail in boring ways: one search query, shallow snippets, no source quality checks, no audit trail, no repeatability, and no clear path when evidence is weak.
+
+BuiltByEcho Research is designed around the opposite workflow:
+
+- **Plan first** — generate multiple search angles before fetching.
+- **Fetch cheap first** — use static HTTP + Readability before opening a browser.
+- **Render when needed** — use Playwright for JS-gated or thin pages.
+- **Read pages semantically** — capture ARIA/accessibility snapshots, not just raw HTML.
+- **Rank evidence** — source quality, freshness, host diversity, and extraction success all matter.
+- **Audit the run** — mark weak research, missing coverage, and suggested follow-ups.
+- **Leave a trace** — write reproducible JSON traces for debugging and review.
+- **Write usable reports** — generate a readable brief with findings, caveats, and sources.
+
+## Current status
+
+**Version:** `0.5.0`
+
+Good for:
+
+- landscape research
+- technical/source discovery
+- competitive scans
+- citation-backed first drafts
+- browser-rendered extraction
+- structured page extraction
+- agent pipelines that need JSON outputs
+
+Not a replacement for human judgment. Treat generated prose as a strong first draft and review it before high-stakes use.
+
+## Installation
+
+### Option 1: Install from GitHub
+
+```bash
+npm install -g github:BuiltByEcho/research
+builtbyecho-research --help
+```
+
+Alias:
+
+```bash
+echo-research --help
+```
+
+### Option 2: Clone locally
+
+```bash
+git clone https://github.com/BuiltByEcho/research.git
+cd research
+npm install
+npx playwright install chromium
+npm test
+node src/cli.mjs --help
+```
+
+### Option 3: npm package
+
+Once published to npm:
+
+```bash
+npm install -g @builtbyecho/research
+builtbyecho-research --help
+```
+
+## Optional setup
+
+No API key is required.
+
+For better search discovery, add a Brave API key:
+
+```bash
+cp .env.example .env
+# edit .env and set BRAVE_API_KEY=...
+```
+
+Without `BRAVE_API_KEY`, search falls back to DuckDuckGo HTML scraping. Fetch, render, crawl, extraction, reports, audits, chunking, and traces all run locally.
+
+## Quick start
+
+### Search and fetch
+
+```bash
+builtbyecho-research search "browser automation accessibility snapshots" -n 5
+builtbyecho-research fetch https://example.com --max-chars 5000
+```
+
+### Render a JavaScript-heavy page
+
+```bash
+builtbyecho-research render https://example.com
+```
+
+The render command returns page text, links, HTML, and a compact ARIA/accessibility snapshot.
+
+### Use a persistent browser profile
+
+Useful for logged-in sites or pages that need cookies:
+
+```bash
+builtbyecho-research render https://app.example.com --profile default --headed
+```
+
+Profiles are stored under `.profiles/` by default and are gitignored.
+
+### Run a multi-angle research pipeline
+
+```bash
+builtbyecho-research pipeline "research agent architecture" \
+  --expand \
+  --rounds 2 \
+  -n 8 \
+  --format markdown \
+  --trace
+```
+
+### Generate a report
+
+```bash
+builtbyecho-research report "Playwright MCP browser automation best practices" \
+  -n 6 \
+  --rounds 2 \
+  --trace
+```
+
+### Extract structured fields from a page
+
+```bash
+builtbyecho-research extract https://example.com --schema links,headings
+builtbyecho-research extract https://example.com --schema emails,phones,pricing,contact_links,socials
+```
+
+### Crawl a site
+
+```bash
+builtbyecho-research crawl https://docs.example.com \
+  --depth 2 \
+  --max-pages 25 \
+  --chunk
+```
 
 ## Commands
 
-```bash
-npm install
-npm run research -- search "valet trash competitors" -n 5
-npm run research -- fetch https://example.com --max-chars 5000
-npm run research -- render https://example.com --screenshot output/example.png
-npm run research -- pipeline "firecrawl web agent github" -n 3 --format markdown --chunk
-npm run research -- compare "solana defi" "base defi" --per-query 3 --format summary
-npm run research -- crawl https://example.com --depth 1 --max-pages 10 --chunk
-npm run research -- cache stats
-npm run research -- cache purge
-npm test
-```
-
-## Architecture
-
-```
-search → fetch → extract → score → dedupe → citations → output
-   │        │        │                       ↑
-   │        │        └─ chunks (optional)    │
-   │        └─ links/headings/metadata       │
-   └─ compare/multi-query                    │
-                                            cache (1h TTL)
-
-crawl: seed URL → BFS links → fetch pages → chunks/citations
-```
-
-### Modules
-
-| Module | Purpose |
+| Command | Purpose |
 |---|---|
-| `search.mjs` | Search discovery (Brave API or DuckDuckGo HTML fallback) |
-| `fetch-url.mjs` | Cheap HTTP fetch with Readability text, headings, links, metadata, JS-gating detection |
-| `render.mjs` | Playwright-rendered extraction for JS-heavy pages |
-| `extractors.mjs` | Extraction strategies: Readability, structural (headings/links/meta), JS-gate detection |
-| `pipeline.mjs` | Composable pipelines: `researchPipeline` (single query) and `comparePipeline` (multi-query) |
-| `crawl.mjs` | Breadth-first crawler with depth/page caps, same-domain restriction, URL filters |
-| `chunking.mjs` | Citation-ready text chunks + citation ledger |
-| `url-utils.mjs` | URL normalization, host matching, tracking-param stripping, file-type filtering |
-| `formatters.mjs` | Output formats: JSON, Markdown report, compact summary, JSON Feed |
-| `cache.mjs` | Disk-based cache with TTL, purge, stats |
+| `search <query>` | Search discovery using Brave API or DuckDuckGo fallback |
+| `fetch <url>` | Cheap HTTP fetch + Readability/metadata extraction |
+| `render <url>` | Playwright render + HTML/text/links + ARIA snapshot |
+| `crawl <url>` | Depth/page-limited BFS crawl with optional chunks |
+| `plan <objective>` | Deterministic multi-angle query plan |
+| `pipeline <query>` | Search → fetch/render → rank → audit → output |
+| `brief <objective>` | Multi-angle citation-aware research pass |
+| `report <objective>` | Executive markdown report with findings/caveats/sources |
+| `extract <url>` | Local heuristic structured extraction |
+| `compare <queries...>` | Multi-query research comparison |
+| `cache` | Cache stats/purge/clear |
 
-## What v0.3 borrows from other research/crawl systems
+## Output formats
 
-A quick scan of open-source deep research and crawler projects suggested the following patterns:
+Use `--format` with `pipeline`, `brief`, or `compare`:
 
-- **dzhng/deep-research:** breadth/depth controls, iterative search, comprehensive markdown reports with sources.
-- **Firecrawl/Web Agent:** layered primitives (search/scrape/crawl/extract), structured output, citations/audit trails, scheduled refresh jobs.
-- **Crawl4AI:** local-first, LLM-ready markdown, multiple extraction strategies, semantic/chunk-oriented processing.
-- **ScrapeGraphAI:** crawl as graph traversal with depth/max-page controls, same-domain options, schema-oriented extraction.
-- **LangChain Open Deep Research:** separate phases/models for search summarization, research, compression, final report; parallel researchers for bigger jobs.
+- `json` — full structured output
+- `markdown` / `md` — source-by-source research report
+- `report` — executive report with findings and sources
+- `summary` — compact titles and URLs
+- `jsonfeed` — JSON Feed v1.1
 
-This harness keeps the implementation small but now has the right primitives for those ideas: depth/page-limited crawling, chunks, citation ledgers, domain filters, scoring, markdown reports, and importable modules.
-
-## Extraction Strategies
-
-- **readability** — Mozilla Readability article extraction. Best for blogs, news, docs.
-- **structural** — Headings, links, images, OG metadata. Works on any HTML.
-- **render** (via `render` command) — Full Playwright render. Last resort for JS-gated pages.
-- **crawl** — Follows links breadth-first for site/domain exploration.
-
-## Crawl
+Example:
 
 ```bash
-# Crawl a site locally, same-domain only by default
-npm run research -- crawl https://docs.example.com --depth 2 --max-pages 25 --chunk
-
-# Focus on docs pages and skip blog/changelog noise
-npm run research -- crawl https://example.com --include '/docs/' --exclude '/blog/,/changelog/'
-
-# Allow off-domain links when mapping an ecosystem
-npm run research -- crawl https://example.com --cross-domain --depth 1 --max-pages 20
+builtbyecho-research pipeline "open source deep research agents" --expand -n 8 --format report
 ```
 
-Crawl output includes each page's URL, parent URL, depth, title, status, headings, links, text preview, and optional citation chunks.
+## Research audits
 
-## Chunks + citations
-
-Use `--chunk` with `pipeline`, `compare`, or `crawl` to emit chunks like:
+Every pipeline/report run includes an audit:
 
 ```json
 {
-  "index": 0,
-  "content": "...",
-  "source": {
-    "url": "https://example.com",
-    "finalUrl": "https://example.com/",
-    "title": "Example Domain",
-    "retrievedAt": "2026-04-26T...Z",
-    "chunkId": "https://example.com#chunk-0"
-  }
+  "grade": "strong",
+  "resultCount": 6,
+  "uniqueHosts": 5,
+  "highQualitySources": 6,
+  "warnings": [],
+  "followUpQueries": [
+    "... architecture implementation patterns",
+    "... limitations failure modes criticism"
+  ]
 }
 ```
 
-Pipeline and compare outputs also include a `citations` ledger with URL/title/timestamp/status/source/score for audit trails.
+Grades:
 
-## Scoring
+- `strong` — enough source diversity and high-quality evidence
+- `needs-review` — useful but has gaps worth checking
+- `weak` — not enough evidence; run follow-ups or change query
 
-Results are scored 0–100 based on:
+## Traces
 
-- Content depth (bytes, text length)
-- Snippet quality
-- Readability/structural extraction success
-- JS-gating penalty (−20)
-- HTTPS bonus, status code, content type
-
-## Output Formats
-
-- `json` — Full structured JSON (default)
-- `markdown` / `md` — Markdown report with headings, snippets, scores
-- `summary` — Compact titles + URLs
-- `jsonfeed` — JSON Feed v1.1 format
-
-## Domain Filtering
+Add `--trace` to save the full run under `output/traces/`:
 
 ```bash
-# Only search specific domains
-npm run research -- pipeline "react hooks" --domains react.dev,github.com
-
-# Exclude noise
-npm run research -- pipeline "solana tutorial" --exclude-domains medium.com,dev.to
+builtbyecho-research report "AI browser automation tools" --trace
 ```
 
-## Cache
+A trace includes:
 
-- Default TTL: 1 hour
-- Stored in `.cache/` (gitignored)
-- Cache keys are SHA-256 hashed
-- Commands: `cache stats`, `cache purge` (expired only), `cache clear`
+- research plan
+- search queries
+- fetched URLs
+- source quality scores
+- audit result
+- citations
+- final selected sources
 
-## API keys
+This is useful for debugging agents, reproducing results, and explaining where a report came from.
 
-Optional:
+## Browser escalation
 
-- `BRAVE_API_KEY` — improves search discovery (Brave API)
-- Without it, falls back to DuckDuckGo HTML scraping
+The pipeline auto-renders when cheap fetch looks weak:
+
+- “enable JavaScript” / “just a moment” / CAPTCHA-like signals
+- very low visible text
+- script-heavy page with thin text
+- explicit `render: true` in library usage
+
+Disable it when you want fetch-only behavior:
+
+```bash
+builtbyecho-research pipeline "topic" --no-auto-render
+```
+
+## Structured extraction schemas
+
+`extract` currently supports practical local heuristics:
+
+- `emails`
+- `phones`
+- `pricing`
+- `links`
+- `contact_links`
+- `socials`
+- `companies`
+- `headings`
+- arbitrary keyword fields, returned as relevant sentences
+
+Example:
+
+```bash
+builtbyecho-research extract https://company.example --schema emails,phones,pricing,contact_links,socials
+```
+
+## Library API
+
+```js
+import {
+  researchPipeline,
+  iterativeResearchPipeline,
+  toResearchReport,
+  extractSchemaFromUrl,
+} from '@builtbyecho/research';
+
+const result = await iterativeResearchPipeline('Playwright MCP best practices', {
+  expand: true,
+  count: 6,
+  rounds: 2,
+});
+
+console.log(toResearchReport(result));
+
+const extracted = await extractSchemaFromUrl('https://example.com', 'links,headings');
+console.log(extracted.data);
+```
+
+## Package contents
+
+The package intentionally includes only what users need:
+
+- `src/`
+- `examples/`
+- `README.md`
+- `LICENSE`
+- `.env.example`
+
+It excludes local caches, traces, browser profiles, screenshots, tests, and development output.
+
+## Development
+
+```bash
+npm install
+npx playwright install chromium
+npm test
+npm run pack:check
+```
+
+Run from source:
+
+```bash
+node src/cli.mjs report "open source research agents" -n 6 --rounds 2
+```
+
+## CI
+
+GitHub Actions runs:
+
+- `npm ci`
+- Playwright Chromium install
+- smoke tests
+- `npm pack --dry-run`
 
 ## Design principles
 
-- **Cheap first.** Static fetch + Readability before Playwright.
-- **Structured output.** Everything is JSON-parseable; other agents can consume it.
-- **Citation-aware.** Every chunk can carry URL/title/retrieval timestamp.
-- **Cache aggressively.** Re-running the same query within an hour is free.
-- **Composable.** Pipeline functions are importable as ES modules.
-- **Local-first.** No hard dependencies on paid scraping APIs.
-- **Never store API keys in this repo.**
+- **Built by agents, for agents** — CLI-first, JSON-first, traceable.
+- **Cheap first** — static fetch before Playwright.
+- **Local-first** — no required paid scraping API.
+- **Citation-aware** — sources and chunks carry URLs and timestamps.
+- **Auditable** — plans, scores, warnings, follow-ups, and traces are first-class.
+- **Composable** — works as a CLI or ES module library.
+- **Practical over magical** — deterministic heuristics where they beat opaque model calls.
+
+## Brand
+
+BuiltByEcho tools are meant to feel sharp, local-first, useful, and agent-native.
+
+This is the first public research tool in that line: a small, inspectable harness that does real work and leaves receipts.
+
+## License
+
+MIT © BuiltByEcho

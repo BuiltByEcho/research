@@ -1,12 +1,52 @@
 {
-  "name": "web-research-harness",
-  "version": "0.3.0",
-  "private": true,
+  "name": "@builtbyecho/research",
+  "version": "0.5.0",
   "type": "module",
-  "description": "Local web research harness: cheap fetch, search discovery, rendered extraction, structured outputs.",
+  "description": "BuiltByEcho Research: local-first web research, browser rendering, source audits, traces, and citation-backed reports.",
+  "bin": {
+    "builtbyecho-research": "./src/cli.mjs",
+    "echo-research": "./src/cli.mjs"
+  },
+  "exports": {
+    ".": "./src/index.mjs",
+    "./cli": "./src/cli.mjs"
+  },
+  "files": [
+    "src",
+    "examples",
+    "README.md",
+    "LICENSE",
+    ".env.example"
+  ],
   "scripts": {
     "research": "node src/cli.mjs",
-    "test": "node test/smoke.mjs"
+    "test": "node test/smoke.mjs",
+    "smoke": "npm test",
+    "pack:check": "npm pack --dry-run"
+  },
+  "keywords": [
+    "builtbyecho",
+    "research",
+    "web-research",
+    "deep-research",
+    "browser-automation",
+    "playwright",
+    "citations",
+    "crawl",
+    "scrape"
+  ],
+  "author": "BuiltByEcho",
+  "license": "MIT",
+  "homepage": "https://github.com/BuiltByEcho/research#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BuiltByEcho/research.git"
+  },
+  "bugs": {
+    "url": "https://github.com/BuiltByEcho/research/issues"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",

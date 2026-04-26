@@ -3,6 +3,21 @@ import { Readability } from '@mozilla/readability';
 import { normalizeUrl } from './url-utils.mjs';
 
 export async function fetchUrl(url, opts = {}) {
+  const retries = opts.retries ?? 1;
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fetchUrlOnce(url, { ...opts, attempt });
+    } catch (e) {
+      lastError = e;
+      if (attempt >= retries) break;
+      await new Promise(resolve => setTimeout(resolve, 300 * (attempt + 1)));
+    }
+  }
+  throw lastError;
+}
+
+async function fetchUrlOnce(url, opts = {}) {
   const timeoutMs = opts.timeoutMs ?? 15000;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -11,7 +26,7 @@ export async function fetchUrl(url, opts = {}) {
       redirect: 'follow',
       signal: controller.signal,
       headers: {
-        'user-agent': opts.userAgent ?? 'Mozilla/5.0 web-research-harness/0.2',
+        'user-agent': opts.userAgent ?? 'Mozilla/5.0 web-research-harness/0.3',
         accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.5',
       },
     });
@@ -28,6 +43,8 @@ export async function fetchUrl(url, opts = {}) {
       bytes: Buffer.byteLength(text),
       title: null,
       metaDescription: null,
+      publishedAt: null,
+      modifiedAt: parseHttpDate(res.headers.get('last-modified')),
       textPreview: '',
       markdownish: '',
       headings: [],
@@ -42,6 +59,8 @@ export async function fetchUrl(url, opts = {}) {
       const doc = dom.window.document;
       result.title = doc.querySelector('title')?.textContent?.trim() || null;
       result.metaDescription = doc.querySelector('meta[name="description"]')?.getAttribute('content')?.trim() || null;
+      result.publishedAt = firstMetaDate(doc, ['article:published_time', 'og:published_time', 'datePublished', 'pubdate', 'publish_date', 'date']);
+      result.modifiedAt = firstMetaDate(doc, ['article:modified_time', 'og:updated_time', 'dateModified', 'lastmod', 'last-modified']) || result.modifiedAt;
       result.headings = Array.from(doc.querySelectorAll('h1,h2,h3'))
         .map(h => ({ level: Number(h.tagName[1]), text: h.textContent?.replace(/\s+/g, ' ').trim().slice(0, 200) }))
         .filter(h => h.text)
@@ -68,4 +87,25 @@ export async function fetchUrl(url, opts = {}) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+function firstMetaDate(doc, names) {
+  for (const name of names) {
+    const value = doc.querySelector(`meta[property="${cssEscape(name)}"]`)?.getAttribute('content')
+      || doc.querySelector(`meta[name="${cssEscape(name)}"]`)?.getAttribute('content')
+      || doc.querySelector('time[datetime]')?.getAttribute('datetime');
+    const parsed = parseHttpDate(value);
+    if (parsed) return parsed;
+  }
+  return null;
+}
+
+function parseHttpDate(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function cssEscape(value) {
+  return String(value).replace(/"/g, '\\"');
 }

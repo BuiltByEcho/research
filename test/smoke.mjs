@@ -6,6 +6,12 @@ import { toMarkdown, toSummary } from '../src/formatters.mjs';
 import { chunkText, attachCitationMetadata, buildCitationLedger } from '../src/chunking.mjs';
 import { normalizeUrl, hostname, isProbablyHtmlUrl } from '../src/url-utils.mjs';
 import { crawlSite } from '../src/crawl.mjs';
+import { buildResearchPlan } from '../src/query-plan.mjs';
+import { assessSourceQuality, diversifyByHost } from '../src/source-quality.mjs';
+import { shouldRenderEscalate } from '../src/pipeline.mjs';
+import { auditResearchRun } from '../src/research-audit.mjs';
+import { extractSchema } from '../src/schema-extract.mjs';
+import { toResearchReport } from '../src/report.mjs';
 
 // fetchUrl
 const res = await fetchUrl('https://example.com');
@@ -31,7 +37,10 @@ console.log('✓ structuralExtract');
 const gate = detectJsGating('', 'enable javascript to continue');
 assert.equal(gate.jsGated, true);
 assert.ok(gate.signals.includes('enable-javascript'));
-console.log('✓ detectJsGating');
+assert.equal(shouldRenderEscalate({ textPreview: 'tiny', html: '<script></script><script></script><script></script><script></script>' }, gate), true);
+assert.equal(shouldRenderEscalate({ textPreview: 'x'.repeat(5000), html: '' }, { jsGated: false }), false);
+assert.equal(shouldRenderEscalate({ textPreview: 'tiny', html: '' }, gate, { autoRender: false }), false);
+console.log('✓ detectJsGating + render escalation decision');
 
 // cache
 const c = new Cache({ dir: '/tmp/test-wrh-cache', ttlMs: 5000 });
@@ -57,6 +66,29 @@ const ledger = buildCitationLedger([{ title: 'Example', url: 'https://example.co
 assert.equal(ledger[0].status, 200);
 console.log('✓ chunking + citations');
 
+// planning + source quality
+const plan = buildResearchPlan('web research harnesses', { maxQueries: 3 });
+assert.equal(plan.queries.length, 3);
+assert.ok(plan.queries[0].query.includes('web research harnesses'));
+const quality = assessSourceQuality({ url: 'https://www.nasa.gov/test' }, { ok: true, status: 200, markdownish: 'x'.repeat(2000), title: 'NASA' });
+assert.ok(quality.score > 70);
+const diverse = diversifyByHost([
+  { url: 'https://a.com/1', score: 99 }, { url: 'https://a.com/2', score: 98 }, { url: 'https://a.com/3', score: 97 }, { url: 'https://b.com/1', score: 80 },
+], { domainCap: 1, maxResults: 2 });
+assert.deepEqual(diverse.map(r => r.url), ['https://a.com/1', 'https://b.com/1']);
+const audit = auditResearchRun({ query: 'test', plan, results: [{ url: 'https://a.com', angle: 'overview', sourceQuality: { score: 80 } }] });
+assert.equal(audit.grade, 'needs-review');
+assert.ok(audit.followUpQueries.length > 0);
+console.log('✓ planning + source quality + audit');
+
+// schema extraction
+const schema = extractSchema('Call ACME Labs LLC at (555) 123-4567 or sales@example.com. Plans start at $49/mo.', [], 'emails,phones,pricing,companies');
+assert.deepEqual(schema.data.emails, ['sales@example.com']);
+assert.ok(schema.data.phones.length);
+assert.ok(schema.data.pricing.includes('$49/mo'));
+assert.ok(schema.data.companies.includes('ACME Labs LLC'));
+console.log('✓ schema extraction');
+
 // crawler
 const crawl = await crawlSite('https://example.com', { depth: 0, maxPages: 1, useCache: false, chunk: true });
 assert.equal(crawl.pagesFetched, 1);
@@ -69,6 +101,11 @@ const md = toMarkdown(mockResult);
 assert.ok(md.includes('# Research: test'));
 assert.ok(md.includes('Score'));
 console.log('✓ toMarkdown');
+
+const report = toResearchReport(mockResult);
+assert.ok(report.includes('Executive summary'));
+assert.ok(report.includes('Sources'));
+console.log('✓ toResearchReport');
 
 const summary = toSummary(mockResult);
 assert.ok(summary.includes('example.com'));

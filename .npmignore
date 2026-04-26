@@ -1,0 +1,10 @@
+node_modules/
+.cache/
+.profiles/
+output/
+test/
+.git/
+.github/
+*.log
+*.tmp
+.DS_Store
