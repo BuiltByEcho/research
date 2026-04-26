@@ -3,3 +3,6 @@ node_modules/
 .profiles/
 output/
 *.png
+!assets/
+!assets/brand/
+!assets/brand/*.png

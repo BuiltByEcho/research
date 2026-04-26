@@ -1,5 +1,9 @@
 # BuiltByEcho Research
 
+<p align="center">
+  <img src="assets/brand/builtbyecho-logo-256.png" alt="BuiltByEcho logo" width="128" height="128">
+</p>
+
 > Local-first web research for agents: plan, search, fetch, render, rank, audit, trace, and report.
 
 [![CI](https://github.com/BuiltByEcho/research/actions/workflows/ci.yml/badge.svg)](https://github.com/BuiltByEcho/research/actions/workflows/ci.yml)

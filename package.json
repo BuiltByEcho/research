@@ -14,6 +14,7 @@
   "files": [
     "src",
     "examples",
+    "assets/brand/builtbyecho-logo-256.png",
     "README.md",
     "LICENSE",
     ".env.example"
