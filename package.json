@@ -1,0 +1,18 @@
+{
+  "name": "web-research-harness",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local web research harness: cheap fetch, search discovery, rendered extraction, structured outputs.",
+  "scripts": {
+    "research": "node src/cli.mjs",
+    "test": "node test/smoke.mjs"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "commander": "^14.0.2",
+    "jsdom": "^27.2.0",
+    "playwright": "^1.57.0",
+    "zod": "^4.2.1"
+  }
+}
