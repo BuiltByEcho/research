@@ -1,6 +1,23 @@
 ---
 name: builtbyecho-research
 description: Use when a user asks an agent to do web research, source discovery, citation-backed reporting, page extraction, crawling, or browser-rendered research using the BuiltByEcho Research npm package. Also use when installing, verifying, or demonstrating @builtbyecho/research.
+version: 0.5.0
+metadata:
+  openclaw:
+    emoji: "🔎"
+    homepage: https://github.com/BuiltByEcho/research
+    requires:
+      bins:
+        - node
+        - npm
+    install:
+      - id: builtbyecho-research
+        kind: node
+        package: "@builtbyecho/research"
+        bins:
+          - builtbyecho-research
+          - echo-research
+        label: Install BuiltByEcho Research from npm
 ---
 
 # BuiltByEcho Research
