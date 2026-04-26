@@ -4,8 +4,8 @@
   "type": "module",
   "description": "BuiltByEcho Research: local-first web research, browser rendering, source audits, traces, and citation-backed reports.",
   "bin": {
-    "builtbyecho-research": "./src/cli.mjs",
-    "echo-research": "./src/cli.mjs"
+    "builtbyecho-research": "src/cli.mjs",
+    "echo-research": "src/cli.mjs"
   },
   "exports": {
     ".": "./src/index.mjs",
