@@ -1,6 +1,6 @@
 {
   "name": "@builtbyecho/research",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "type": "module",
   "description": "BuiltByEcho Research: local-first web research, browser rendering, source audits, traces, and citation-backed reports.",
   "bin": {
