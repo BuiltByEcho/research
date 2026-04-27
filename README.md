@@ -10,17 +10,54 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-cyan.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-0ea5e9.svg)](package.json)
 
-**BuiltByEcho Research** is a practical research harness for agents and developers who need reliable source discovery, citation-backed reports, and browser-aware extraction without depending on paid scraping APIs.
+**BuiltByEcho Research** is a practical research harness for agents and developers who need reliable source discovery, citation-backed reports, and browser-aware extraction — without depending on paid scraping APIs.
 
-It starts cheap with normal HTTP fetches, escalates to Playwright only when a page needs rendering, scores source quality, audits evidence coverage, and saves traceable JSON artifacts so every research run can be inspected later.
+It starts cheap with plain HTTP fetches, escalates to Playwright only when a page needs rendering, scores source quality, audits evidence coverage, and saves traceable JSON artifacts so every research run can be inspected later.
 
-```text
-plan → search → fetch → maybe render → extract → score → diversify → audit → follow up → report/trace
 ```
+┌─────────┐   ┌────────┐   ┌───────────┐   ┌──────────────────────┐
+│  Plan   │──▶│ Search │──▶│   Fetch   │──▶│  Render?             │
+│         │   │        │   │ (cheap)   │   │  ┌─ JS-gated?        │
+│ multi-  │   │ Brave  │   │          │   │  ├─ thin text?        │
+│ angle   │   │ or DDG │   │ Readabil.│   │  └─ auto-escalate    │
+└─────────┘   └────────┘   └───────────┘   └──────────┬───────────┘
+                                                      │
+                    ┌─────────────────────────────────┘
+                    ▼
+             ┌────────────┐   ┌────────────┐   ┌──────────┐   ┌──────────┐
+             │   Score &   │──▶│   Diversify │──▶│  Audit   │──▶│  Report  │
+             │   Rank     │   │  by Host   │   │          │   │  + Trace │
+             └────────────┘   └────────────┘   └──────────┘   └──────────┘
+```
+
+## Table of contents
+
+- [Why this exists](#why-this-exists)
+- [Current status](#current-status)
+- [Installation](#installation)
+- [Optional setup](#optional-setup)
+- [Quick start](#quick-start)
+- [Commands](#commands)
+- [Output formats](#output-formats)
+- [Research audits](#research-audits)
+- [Traces](#traces)
+- [Browser escalation](#browser-escalation)
+- [Structured extraction](#structured-extraction)
+- [Crawling](#crawling)
+- [Library API](#library-api)
+- [Architecture](#architecture)
+- [Package contents](#package-contents)
+- [Development](#development)
+- [CI](#ci)
+- [Design principles](#design-principles)
+- [Brand](#brand)
+- [Contributing](#contributing)
+- [Changelog](#changelog)
+- [License](#license)
 
 ## Why this exists
 
-Most “research agents” fail in boring ways: one search query, shallow snippets, no source quality checks, no audit trail, no repeatability, and no clear path when evidence is weak.
+Most "research agents" fail in boring ways: one search query, shallow snippets, no source quality checks, no audit trail, no repeatability, and no clear path when evidence is weak.
 
 BuiltByEcho Research is designed around the opposite workflow:
 
@@ -39,13 +76,12 @@ BuiltByEcho Research is designed around the opposite workflow:
 
 Good for:
 
-- landscape research
-- technical/source discovery
-- competitive scans
-- citation-backed first drafts
-- browser-rendered extraction
-- structured page extraction
-- agent pipelines that need JSON outputs
+- Landscape and competitive research
+- Technical and source discovery
+- Citation-backed first drafts
+- Browser-rendered extraction from JS-heavy pages
+- Structured page extraction (emails, phones, pricing, links)
+- Agent pipelines that need JSON outputs with audit trails
 
 Not a replacement for human judgment. Treat generated prose as a strong first draft and review it before high-stakes use.
 
@@ -77,23 +113,20 @@ node src/cli.mjs --help
 
 ### Option 3: npm package
 
-Once published to npm:
-
 ```bash
 npm install -g @builtbyecho/research
 builtbyecho-research --help
 ```
 
-
 ### OpenClaw / Agent skill
 
 This repo includes an OpenClaw-compatible skill at [`skills/builtbyecho-research/SKILL.md`](skills/builtbyecho-research/SKILL.md).
 
-Agents can use that file as their install/use guide for `@builtbyecho/research`, including `npx`, global npm install, browser setup, and common research commands.
+Agents can use that file as their install and usage guide for `@builtbyecho/research`, including `npx`, global npm install, browser setup, and common research commands.
 
 ## Optional setup
 
-No API key is required.
+No API key is required. Everything runs locally.
 
 For better search discovery, add a Brave API key:
 
@@ -102,7 +135,7 @@ cp .env.example .env
 # edit .env and set BRAVE_API_KEY=...
 ```
 
-Without `BRAVE_API_KEY`, search falls back to DuckDuckGo HTML scraping. Fetch, render, crawl, extraction, reports, audits, chunking, and traces all run locally.
+Without `BRAVE_API_KEY`, search falls back to DuckDuckGo HTML scraping. Fetch, render, crawl, extraction, reports, audits, chunking, and traces all work without it.
 
 ## Quick start
 
@@ -142,13 +175,31 @@ builtbyecho-research pipeline "research agent architecture" \
   --trace
 ```
 
-### Generate a report
+### Generate a citation-backed report
 
 ```bash
 builtbyecho-research report "Playwright MCP browser automation best practices" \
   -n 6 \
   --rounds 2 \
   --trace
+```
+
+### Run a brief (multi-angle research pass)
+
+```bash
+builtbyecho-research brief "AI agent orchestration frameworks" \
+  -n 8 \
+  --rounds 2 \
+  --format markdown \
+  --trace
+```
+
+### Compare multiple topics side-by-side
+
+```bash
+builtbyecho-research compare "LangChain" "LlamaIndex" "CrewAI" \
+  --per-query 3 \
+  --format report
 ```
 
 ### Extract structured fields from a page
@@ -177,21 +228,72 @@ builtbyecho-research crawl https://docs.example.com \
 | `crawl <url>` | Depth/page-limited BFS crawl with optional chunks |
 | `plan <objective>` | Deterministic multi-angle query plan |
 | `pipeline <query>` | Search → fetch/render → rank → audit → output |
-| `brief <objective>` | Multi-angle citation-aware research pass |
+| `brief <objective>` | Multi-angle, citation-aware research pass (expand + iterative) |
 | `report <objective>` | Executive markdown report with findings/caveats/sources |
 | `extract <url>` | Local heuristic structured extraction |
 | `compare <queries...>` | Multi-query research comparison |
 | `cache` | Cache stats/purge/clear |
 
+### Key flags
+
+**Pipeline, brief, report, compare:**
+
+| Flag | Default | Purpose |
+|---|---|---|
+| `-n, --count` | 5–8 | Number of results to return |
+| `--rounds` | 1–2 | Iterative follow-up rounds (more rounds = deeper research) |
+| `--expand` | off | Expand query into multiple search angles |
+| `--max-queries` | 4–5 | Number of query angles when expanding |
+| `--chunk` | off | Include citation-ready chunks in output |
+| `--trace` | off | Write trace JSON under `output/traces/` |
+| `-f, --format` | json | Output format: `json`, `markdown`, `summary`, `jsonfeed`, `report` |
+| `--no-cache` | off | Bypass cache for fresh results |
+
+**Pipeline only:**
+
+| Flag | Default | Purpose |
+|---|---|---|
+| `--domains <list>` | all | Comma-separated domain allowlist |
+| `--exclude-domains <list>` | none | Comma-separated domain blocklist |
+| `--domain-cap` | 2 | Max results per host after reranking |
+| `--no-diverse` | off | Disable host diversity reranking |
+| `--no-auto-render` | off | Disable Playwright escalation for JS-gated/thin pages |
+| `--profile <name>` | none | Persistent Playwright browser profile |
+| `--profile-dir <dir>` | `.profiles` | Base directory for profiles |
+
+**Crawl:**
+
+| Flag | Default | Purpose |
+|---|---|---|
+| `--depth` | 1 | Link depth to follow |
+| `--max-pages` | 20 | Maximum pages to fetch |
+| `--same-domain` | on | Stay on the same domain |
+| `--cross-domain` | off | Allow off-domain links |
+| `--include <regexes>` | none | Comma-separated URL include patterns |
+| `--exclude <regexes>` | none | Comma-separated URL exclude patterns |
+| `--chunk` | off | Include citation-ready chunks |
+| `--chunk-chars` | 1200 | Chunk size in characters |
+| `--overlap-chars` | 150 | Chunk overlap in characters |
+
+**Cache subcommands:**
+
+```bash
+builtbyecho-research cache stats     # show cache stats
+builtbyecho-research cache purge     # remove expired entries
+builtbyecho-research cache clear     # clear everything
+```
+
 ## Output formats
 
 Use `--format` with `pipeline`, `brief`, or `compare`:
 
-- `json` — full structured output
-- `markdown` / `md` — source-by-source research report
-- `report` — executive report with findings and sources
-- `summary` — compact titles and URLs
-- `jsonfeed` — JSON Feed v1.1
+| Format | Description |
+|---|---|
+| `json` | Full structured output (default) |
+| `markdown` / `md` | Source-by-source research report |
+| `report` | Executive report with findings and sources |
+| `summary` | Compact titles and URLs |
+| `jsonfeed` | JSON Feed v1.1 |
 
 Example:
 
@@ -201,7 +303,7 @@ builtbyecho-research pipeline "open source deep research agents" --expand -n 8 -
 
 ## Research audits
 
-Every pipeline/report run includes an audit:
+Every pipeline, brief, and report run includes an audit:
 
 ```json
 {
@@ -219,9 +321,9 @@ Every pipeline/report run includes an audit:
 
 Grades:
 
-- `strong` — enough source diversity and high-quality evidence
-- `needs-review` — useful but has gaps worth checking
-- `weak` — not enough evidence; run follow-ups or change query
+- **`strong`** — enough source diversity and high-quality evidence
+- **`needs-review`** — useful but has gaps worth checking
+- **`weak`** — not enough evidence; run follow-ups or change query
 
 ## Traces
 
@@ -233,61 +335,137 @@ builtbyecho-research report "AI browser automation tools" --trace
 
 A trace includes:
 
-- research plan
-- search queries
-- fetched URLs
-- source quality scores
-- audit result
-- citations
-- final selected sources
+- Research plan
+- Search queries issued
+- Fetched URLs
+- Source quality scores
+- Audit result
+- Citations
+- Final selected sources
 
-This is useful for debugging agents, reproducing results, and explaining where a report came from.
+Traces are useful for debugging agents, reproducing results, and explaining where a report came from.
 
 ## Browser escalation
 
 The pipeline auto-renders when cheap fetch looks weak:
 
-- “enable JavaScript” / “just a moment” / CAPTCHA-like signals
-- very low visible text
-- script-heavy page with thin text
-- explicit `render: true` in library usage
+- "enable JavaScript" / "just a moment" / CAPTCHA-like signals
+- Very low visible text
+- Script-heavy page with thin text
+- Explicit `render: true` in library usage
 
-Disable it when you want fetch-only behavior:
+Disable it for fetch-only behavior:
 
 ```bash
 builtbyecho-research pipeline "topic" --no-auto-render
 ```
 
-## Structured extraction schemas
+Use a persistent profile for sites requiring login:
 
-`extract` currently supports practical local heuristics:
+```bash
+builtbyecho-research pipeline "topic" --profile default --headed
+```
 
-- `emails`
-- `phones`
-- `pricing`
-- `links`
-- `contact_links`
-- `socials`
-- `companies`
-- `headings`
-- arbitrary keyword fields, returned as relevant sentences
+## Structured extraction
 
-Example:
+`extract` uses local heuristics — no model calls, no API keys:
+
+| Schema field | What it finds |
+|---|---|
+| `emails` | Email addresses |
+| `phones` | Phone numbers |
+| `pricing` | Price patterns ($99, €49/mo, etc.) |
+| `links` | All links with text and URLs |
+| `contact_links` | Links containing "contact", "about", "support", etc. |
+| `socials` | Social media profile links |
+| `companies` | Company/organization names (from headings, meta) |
+| `headings` | Page heading hierarchy (h1–h6) |
+
+Plus arbitrary keyword fields, returned as relevant sentences.
 
 ```bash
 builtbyecho-research extract https://company.example --schema emails,phones,pricing,contact_links,socials
+```
+
+Add `--render` for pages that need Playwright:
+
+```bash
+builtbyecho-research extract https://spa.example --schema links --render
+```
+
+## Crawling
+
+`crawl` does breadth-first traversal with depth and page limits:
+
+```bash
+# Basic crawl
+builtbyecho-research crawl https://docs.example.com --depth 2 --max-pages 25
+
+# With citation-ready chunks
+builtbyecho-research crawl https://docs.example.com --depth 2 --max-pages 25 --chunk
+
+# Filter URLs with patterns
+builtbyecho-research crawl https://blog.example.com --include "/post/,/article/" --exclude "/tag/,/page/"
+
+# Allow cross-domain links
+builtbyecho-research crawl https://example.com --cross-domain --depth 2
 ```
 
 ## Library API
 
 ```js
 import {
+  // Core pipeline
   researchPipeline,
   iterativeResearchPipeline,
-  toResearchReport,
-  extractSchemaFromUrl,
-} from '@builtbyecho/research';
+  comparePipeline,
 
+  // Search & fetch
+  searchWeb,
+  fetchUrl,
+
+  // Browser rendering
+  renderExtract,
+  compactAccessibilitySnapshot,
+
+  // Crawling
+  crawlSite,
+
+  // Planning & audit
+  buildResearchPlan,
+  auditResearchRun,
+
+  // Scoring & diversity
+  assessSourceQuality,
+  diversifyByHost,
+  shouldRenderEscalate,
+
+  // Structured extraction
+  extractSchema,
+  extractSchemaFromUrl,
+  parseSchema,
+
+  // Output formatting
+  toMarkdown,
+  toSummary,
+  toJsonFeed,
+  toResearchReport,
+
+  // Chunking & citations
+  chunkText,
+  attachCitationMetadata,
+  buildCitationLedger,
+
+  // Tracing
+  writeTrace,
+} from '@builtbyecho/research';
+```
+
+### Quick examples
+
+**Run an iterative pipeline:**
+
+```js
 const result = await iterativeResearchPipeline('Playwright MCP best practices', {
   expand: true,
   count: 6,
@@ -295,17 +473,71 @@ const result = await iterativeResearchPipeline('Playwright MCP best practices', 
 });
 
 console.log(toResearchReport(result));
+```
 
+**Extract structured data from a URL:**
+
+```js
 const extracted = await extractSchemaFromUrl('https://example.com', 'links,headings');
 console.log(extracted.data);
 ```
+
+**Fetch and chunk with citations:**
+
+```js
+const { text, metadata } = await fetchUrl('https://example.com');
+const chunks = chunkText(text, { chunkChars: 1200, overlapChars: 150 });
+const cited = attachCitationMetadata(chunks, metadata);
+```
+
+**Render a JS-heavy page and get its ARIA tree:**
+
+```js
+const { text, links, snapshot } = await renderExtract('https://spa.example.com');
+const aria = compactAccessibilitySnapshot(snapshot);
+```
+
+## Architecture
+
+```
+src/
+├── cli.mjs              # Commander CLI — all commands and flags
+├── index.mjs            # Public ES module exports
+├── search.mjs           # Brave API + DuckDuckGo fallback
+├── fetch-url.mjs        # HTTP fetch + Readability + metadata
+├── render.mjs           # Playwright render + ARIA snapshots
+├── crawl.mjs            # BFS crawl with depth/page limits
+├── pipeline.mjs         # Full research pipeline + escalation logic
+├── query-plan.mjs       # Deterministic multi-angle query planner
+├── source-quality.mjs   # Source scoring + host diversity reranking
+├── research-audit.mjs   # Post-run audit (grade, warnings, follow-ups)
+├── report.mjs           # Citation-backed markdown report writer
+├── schema-extract.mjs   # Local heuristic structured extraction
+├── extractors.mjs       # Individual field extractors (email, phone, etc.)
+├── chunking.mjs         # Text chunking + citation metadata
+├── formatters.mjs       # Markdown, summary, JSON Feed output
+├── traces.mjs           # Reproducible JSON trace writer
+├── cache.mjs            # In-memory cache with TTL + stats
+└── url-utils.mjs        # URL normalization and domain helpers
+```
+
+**Data flow:**
+
+1. `search.mjs` discovers URLs via Brave or DuckDuckGo
+2. `fetch-url.mjs` does cheap HTTP + Readability extraction
+3. `render.mjs` escalates to Playwright when needed
+4. `source-quality.mjs` scores and reranks by quality + diversity
+5. `research-audit.mjs` grades the run and suggests follow-ups
+6. `report.mjs` or `formatters.mjs` writes the final output
+7. `traces.mjs` saves the full artifact for reproducibility
 
 ## Package contents
 
 The package intentionally includes only what users need:
 
-- `src/`
-- `examples/`
+- `src/` — all source modules
+- `examples/` — quickstart examples
+- `assets/brand/` — logo assets
 - `README.md`
 - `LICENSE`
 - `.env.example`
@@ -333,7 +565,7 @@ GitHub Actions runs:
 
 - `npm ci`
 - Playwright Chromium install
-- smoke tests
+- Smoke tests
 - `npm pack --dry-run`
 
 ## Design principles
@@ -351,6 +583,20 @@ GitHub Actions runs:
 BuiltByEcho tools are meant to feel sharp, local-first, useful, and agent-native.
 
 This is the first public research tool in that line: a small, inspectable harness that does real work and leaves receipts.
+
+## Contributing
+
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feature/my-thing`)
+3. Make your changes
+4. Run `npm test` and `npm run pack:check`
+5. Open a pull request
+
+Bug reports and feature requests welcome at [GitHub Issues](https://github.com/BuiltByEcho/research/issues).
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
