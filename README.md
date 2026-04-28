@@ -594,6 +594,12 @@ This is the first public research tool in that line: a small, inspectable harnes
 
 Bug reports and feature requests welcome at [GitHub Issues](https://github.com/BuiltByEcho/research/issues).
 
+**Feedback & Questions**
+
+- **[Open an issue](https://github.com/BuiltByEcho/research/issues/new)** — bug reports, feature requests, questions
+- **[Discussions](https://github.com/BuiltByEcho/research/discussions)** — ideas, Q&A, show & tell
+- **[Discord](https://discord.com/invite/clawd)** — community chat
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for release history.
