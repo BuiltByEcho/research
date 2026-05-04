@@ -48,12 +48,12 @@ export async function researchPipeline(query, opts = {}) {
   // 3. Fetch + extract each
   const enriched = [];
   for (const r of candidates) {
-    const cacheKey = `pipeline:${r.url}:${strategies.join(',')}:v5`;
+    const cacheKey = `pipeline:${r.url}:${strategies.join(',')}:${opts.backend || 'native'}:v6`;
     const cached = useCache ? cache.get(cacheKey) : null;
     if (cached) { enriched.push(cached); continue; }
 
     try {
-      let fetched = await fetchUrl(r.url, { previewChars: maxChars, maxChars: 100_000, includeHtml: true });
+      let fetched = await fetchUrl(r.url, { previewChars: maxChars, maxChars: 100_000, includeHtml: true, backend: opts.backend, scraplingPython: opts.scraplingPython, headless: opts.headless, waitSelector: opts.waitSelector });
       let html = fetched.html ?? '';
       let jsGate = detectJsGating(html, fetched.textPreview || '');
       let rendered = null;
@@ -102,6 +102,7 @@ export async function researchPipeline(query, opts = {}) {
           jsGatedSignals: jsGate.signals,
           rendered: Boolean(rendered),
           renderEngine: rendered?.render?.engine,
+          backend: fetched.backend,
         },
         accessibility: rendered?.accessibility,
         sourceQuality,

@@ -1,5 +1,6 @@
 export { searchWeb } from './search.mjs';
 export { fetchUrl } from './fetch-url.mjs';
+export { fetchWithScrapling, isScraplingAvailable } from './scrapling.mjs';
 export { renderExtract, compactAccessibilitySnapshot } from './render.mjs';
 export { crawlSite } from './crawl.mjs';
 export { researchPipeline, iterativeResearchPipeline, comparePipeline, shouldRenderEscalate } from './pipeline.mjs';

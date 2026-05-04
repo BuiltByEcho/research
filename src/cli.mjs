@@ -15,21 +15,24 @@ import { Cache } from './cache.mjs';
 const cache = new Cache();
 
 const program = new Command();
-program.name('builtbyecho-research').description('BuiltByEcho Research: local-first web research, browser rendering, audits, traces, and reports').version('0.5.0');
+program.name('builtbyecho-research').description('BuiltByEcho Research: local-first web research, browser rendering, audits, traces, and reports').version('0.5.2');
 
 program.command('fetch <url>')
   .option('--max-chars <n>', 'max extraction chars', '20000')
   .option('--timeout <ms>', 'fetch timeout ms', '15000')
+  .option('--backend <name>', 'fetch backend: native|scrapling|scrapling-dynamic|scrapling-stealth', 'native')
+  .option('--scrapling-python <bin>', 'Python binary for Scrapling backend')
   .option('--html', 'include raw HTML in JSON output')
   .option('--cache', 'use cache', true)
   .option('--no-cache', 'bypass cache')
   .action(async (url, opts) => {
+    const cacheKey = `fetch:${url}:${opts.html ? 'html' : 'nohtml'}:${opts.backend || 'native'}`;
     if (opts.cache) {
-      const cached = cache.get(`fetch:${url}:${opts.html ? 'html' : 'nohtml'}`);
+      const cached = cache.get(cacheKey);
       if (cached) { console.log(JSON.stringify(cached, null, 2)); return; }
     }
-    const result = await fetchUrl(url, { maxChars: Number(opts.maxChars), timeoutMs: Number(opts.timeout), includeHtml: opts.html });
-    if (opts.cache) cache.set(`fetch:${url}:${opts.html ? 'html' : 'nohtml'}`, result);
+    const result = await fetchUrl(url, { maxChars: Number(opts.maxChars), timeoutMs: Number(opts.timeout), includeHtml: opts.html, backend: opts.backend, scraplingPython: opts.scraplingPython });
+    if (opts.cache) cache.set(cacheKey, result);
     console.log(JSON.stringify(result, null, 2));
   });
 
@@ -77,6 +80,8 @@ program.command('crawl <url>')
   .option('--chunk', 'include citation-ready chunks')
   .option('--chunk-chars <n>', 'chunk size', '1200')
   .option('--overlap-chars <n>', 'chunk overlap', '150')
+  .option('--backend <name>', 'fetch backend: native|scrapling|scrapling-dynamic|scrapling-stealth', 'native')
+  .option('--scrapling-python <bin>', 'Python binary for Scrapling backend')
   .option('-f, --format <fmt>', 'output format: json|summary', 'json')
   .option('--no-cache', 'bypass cache')
   .action(async (url, opts) => {
@@ -89,6 +94,8 @@ program.command('crawl <url>')
       chunk: Boolean(opts.chunk),
       chunkChars: Number(opts.chunkChars),
       overlapChars: Number(opts.overlapChars),
+      backend: opts.backend,
+      scraplingPython: opts.scraplingPython,
       useCache: opts.cache !== false,
     });
     if (opts.format === 'summary') {
@@ -119,6 +126,8 @@ program.command('pipeline <query>')
   .option('--no-auto-render', 'disable Playwright escalation for JS-gated/thin pages')
   .option('--profile <name>', 'persistent Playwright browser profile for render escalation')
   .option('--profile-dir <dir>', 'base directory for persistent profiles', '.profiles')
+  .option('--backend <name>', 'fetch backend: native|scrapling|scrapling-dynamic|scrapling-stealth', 'native')
+  .option('--scrapling-python <bin>', 'Python binary for Scrapling backend')
   .option('--chunk', 'include citation-ready chunks')
   .option('--trace', 'write trace JSON under output/traces')
   .option('-f, --format <fmt>', 'output format: json|markdown|summary|jsonfeed|report', 'json')
@@ -141,6 +150,8 @@ program.command('brief <objective>')
   .option('--rounds <n>', 'iterative follow-up rounds', '2')
   .option('--chunk', 'include citation-ready chunks')
   .option('--trace', 'write trace JSON under output/traces')
+  .option('--backend <name>', 'fetch backend: native|scrapling|scrapling-dynamic|scrapling-stealth', 'native')
+  .option('--scrapling-python <bin>', 'Python binary for Scrapling backend')
   .option('-f, --format <fmt>', 'output format: json|markdown|summary|jsonfeed|report', 'markdown')
   .option('--no-cache', 'bypass cache')
   .action(async (objective, opts) => {
@@ -151,6 +162,8 @@ program.command('brief <objective>')
       maxQueries: Number(opts.maxQueries),
       rounds: Number(opts.rounds),
       chunk: Boolean(opts.chunk),
+      backend: opts.backend,
+      scraplingPython: opts.scraplingPython,
     });
     if (opts.trace) result.tracePath = writeTrace(result, { label: objective });
     output(result, opts.format, objective);
@@ -162,6 +175,8 @@ program.command('report <objective>')
   .option('--rounds <n>', 'iterative follow-up rounds', '2')
   .option('--max-queries <n>', 'query angles', '5')
   .option('--trace', 'write trace JSON under output/traces')
+  .option('--backend <name>', 'fetch backend: native|scrapling|scrapling-dynamic|scrapling-stealth', 'native')
+  .option('--scrapling-python <bin>', 'Python binary for Scrapling backend')
   .option('--no-cache', 'bypass cache')
   .action(async (objective, opts) => {
     const result = await iterativeResearchPipeline(objective, {
@@ -170,6 +185,8 @@ program.command('report <objective>')
       expand: true,
       maxQueries: Number(opts.maxQueries),
       rounds: Number(opts.rounds),
+      backend: opts.backend,
+      scraplingPython: opts.scraplingPython,
     });
     if (opts.trace) result.tracePath = writeTrace(result, { label: objective });
     console.log(toResearchReport(result, { title: objective }));
@@ -191,6 +208,8 @@ program.command('compare <queries...>')
   .option('--max-results <n>', 'total max results', '15')
   .option('--chunk', 'include citation-ready chunks')
   .option('--trace', 'write trace JSON under output/traces')
+  .option('--backend <name>', 'fetch backend: native|scrapling|scrapling-dynamic|scrapling-stealth', 'native')
+  .option('--scrapling-python <bin>', 'Python binary for Scrapling backend')
   .option('-f, --format <fmt>', 'output format: json|markdown|summary|jsonfeed|report', 'json')
   .option('--no-cache', 'bypass cache')
   .action(async (queries, opts) => {
@@ -199,6 +218,8 @@ program.command('compare <queries...>')
       maxResults: Number(opts.maxResults),
       useCache: opts.cache !== false,
       chunk: Boolean(opts.chunk),
+      backend: opts.backend,
+      scraplingPython: opts.scraplingPython,
     });
     if (opts.trace) result.tracePath = writeTrace(result, { label: queries.join(' vs ') });
     output(result, opts.format, queries.join(' vs '));
@@ -223,6 +244,8 @@ function makePipelineOpts(opts) {
     autoRender: opts.autoRender !== false,
     profile: opts.profile,
     profileBaseDir: opts.profileDir,
+    backend: opts.backend,
+    scraplingPython: opts.scraplingPython,
   };
 }
 

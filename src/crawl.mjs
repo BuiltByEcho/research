@@ -33,10 +33,10 @@ export async function crawlSite(startUrl, opts = {}) {
     if (excludePatterns.length && matchesAny(item.url, excludePatterns)) continue;
 
     try {
-      const cacheKey = `crawl:fetch:${item.url}`;
+      const cacheKey = `crawl:fetch:${item.url}:${opts.backend || 'native'}`;
       let fetched = useCache ? cache.get(cacheKey) : null;
       if (!fetched) {
-        fetched = await fetchUrl(item.url, { maxChars: opts.maxChars ?? 20_000, previewChars: opts.previewChars ?? 800, maxLinks: opts.maxLinks ?? 200 });
+        fetched = await fetchUrl(item.url, { maxChars: opts.maxChars ?? 20_000, previewChars: opts.previewChars ?? 800, maxLinks: opts.maxLinks ?? 200, backend: opts.backend, scraplingPython: opts.scraplingPython, headless: opts.headless, waitSelector: opts.waitSelector });
         if (useCache) cache.set(cacheKey, fetched);
       }
 
@@ -53,6 +53,7 @@ export async function crawlSite(startUrl, opts = {}) {
         retrievedAt: fetched.retrievedAt,
         jsGated: fetched.jsGated,
         jsGatedReason: fetched.jsGatedReason,
+        backend: fetched.backend,
         headings: fetched.headings,
         textPreview: fetched.markdownish?.slice(0, opts.maxChars ?? 20_000) || fetched.textPreview,
         links: fetched.links,

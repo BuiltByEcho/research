@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] — 2026-05-03
+
+### Added
+
+- Optional Scrapling backend for fetch, crawl, pipeline, brief, report, and compare commands.
+- `--backend scrapling`, `--backend scrapling-dynamic`, and `--backend scrapling-stealth` modes.
+- `--scrapling-python` / `SCRAPLING_PYTHON` support for virtualenv-based Scrapling installs.
+- Public `fetchWithScrapling()` and `isScraplingAvailable()` library exports.
+
+### Changed
+
+- Fetch/crawl/pipeline cache keys now include backend identity so native and Scrapling results do not collide.
+
 ## [0.5.0] — 2026-04-26
 
 ### Added

@@ -72,7 +72,7 @@ BuiltByEcho Research is designed around the opposite workflow:
 
 ## Current status
 
-**Version:** `0.5.0`
+**Version:** `0.5.2`
 
 Good for:
 
@@ -128,6 +128,17 @@ Agents can use that file as their install and usage guide for `@builtbyecho/rese
 
 No API key is required. Everything runs locally.
 
+Optional Scrapling backend for adaptive/stealthier Python fetching:
+
+```bash
+python3 -m pip install 'scrapling[fetchers]'
+builtbyecho-research fetch https://example.com --backend scrapling
+builtbyecho-research fetch https://example.com --backend scrapling-dynamic
+builtbyecho-research fetch https://example.com --backend scrapling-stealth
+```
+
+If Scrapling lives in a virtualenv, pass `--scrapling-python /path/to/venv/bin/python` or set `SCRAPLING_PYTHON`.
+
 For better search discovery, add a Brave API key:
 
 ```bash
@@ -144,6 +155,7 @@ Without `BRAVE_API_KEY`, search falls back to DuckDuckGo HTML scraping. Fetch, r
 ```bash
 builtbyecho-research search "browser automation accessibility snapshots" -n 5
 builtbyecho-research fetch https://example.com --max-chars 5000
+builtbyecho-research fetch https://example.com --backend scrapling --max-chars 5000
 ```
 
 ### Render a JavaScript-heavy page
