@@ -1,7 +1,7 @@
 ---
 name: builtbyecho-research
 description: Use when a user asks an agent to do web research, source discovery, citation-backed reporting, page extraction, crawling, or browser-rendered research using the BuiltByEcho Research npm package. Also use when installing, verifying, or demonstrating @builtbyecho/research.
-version: 0.5.0
+version: 0.5.2
 metadata:
   openclaw:
     emoji: "🔎"
